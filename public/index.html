@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS EC2 & RDS Lab Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-amber-500 selection:text-black">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            AWS Cloud Lab
+          </span>
+          <span id="health-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> App Online
+          </span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white mt-2">EC2 & RDS Integration Lab</h1>
+        <p class="text-slate-400 text-sm mt-1">Uji konektivitas komputasi EC2 dan database RDS MySQL/PostgreSQL</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="refreshAll()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 transition text-sm font-medium rounded-lg border border-slate-700 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh Data
+        </button>
+      </div>
+    </header>
+
+    <!-- Grid: EC2 Info & RDS Status -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      
+      <!-- Card 1: EC2 Host Info -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800/80">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-white">Compute Node (EC2)</h2>
+              <p class="text-xs text-slate-400">Status instance & server runtime</p>
+            </div>
+          </div>
+          <span id="ec2-indicator" class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-300 font-mono">Checking...</span>
+        </div>
+
+        <div class="mt-4 space-y-3 text-sm">
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Hostname</span>
+            <span id="server-hostname" class="font-mono text-slate-200 text-xs">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">OS / Kernel</span>
+            <span id="server-os" class="font-mono text-slate-200 text-xs">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">EC2 Instance ID</span>
+            <span id="ec2-id" class="font-mono text-amber-400 text-xs font-semibold">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Availability Zone</span>
+            <span id="ec2-az" class="font-mono text-slate-200 text-xs">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Public / Local IP</span>
+            <span id="ec2-ips" class="font-mono text-slate-200 text-xs text-right">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-400">Uptime</span>
+            <span id="server-uptime" class="font-mono text-slate-200 text-xs">...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: RDS Database Status -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800/80">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7M4 7c0-2 1.5-3 3.5-3h9c2 0 3.5 1 3.5 3M4 7c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3m-16 5c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3"/></svg>
+            </div>
+            <div>
+              <h2 class="text-base font-semibold text-white">Database (AWS RDS)</h2>
+              <p class="text-xs text-slate-400">Koneksi jaringan VPC & tabel</p>
+            </div>
+          </div>
+          <div id="db-badge">
+            <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-mono">Checking...</span>
+          </div>
+        </div>
+
+        <div class="mt-4 space-y-3 text-sm">
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Dialect / Engine</span>
+            <span id="db-engine" class="font-mono text-slate-200 text-xs">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Endpoint / Host</span>
+            <span id="db-host" class="font-mono text-slate-200 text-xs max-w-[240px] truncate">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Database Name</span>
+            <span id="db-name" class="font-mono text-slate-200 text-xs">...</span>
+          </div>
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+            <span class="text-slate-400">Latency Roundtrip</span>
+            <span id="db-latency" class="font-mono text-emerald-400 text-xs font-semibold">...</span>
+          </div>
+          <div class="pt-2">
+            <div id="db-error-box" class="hidden p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono break-all mb-3"></div>
+            <button onclick="checkDbStatus()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 active:scale-98 transition text-xs font-semibold rounded-lg text-white flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Ping / Test RDS Connection
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Data CRUD Proof (Notes) -->
+    <div class="mt-8 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-white">Uji Transaksi RDS (Create & Read Data)</h2>
+          <p class="text-xs text-slate-400">Tulis data baru ke tabel RDS untuk membuktikan persistence dan operasi SQL berjalan</p>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-mono" id="note-count">0 Records</span>
+      </div>
+
+      <!-- Add Form -->
+      <form id="note-form" onsubmit="handleCreateNote(event)" class="mt-4 grid grid-cols-1 md:grid-cols-12 gap-3">
+        <div class="md:col-span-4">
+          <input type="text" id="note-title" required placeholder="Judul / Nama Mahasiswa / Catatan..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500" />
+        </div>
+        <div class="md:col-span-6">
+          <input type="text" id="note-content" placeholder="Keterangan singkat / log kegiatan lab..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500" />
+        </div>
+        <div class="md:col-span-2">
+          <button type="submit" id="btn-submit-note" class="w-full py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 transition text-slate-950 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Simpan
+          </button>
+        </div>
+      </form>
+
+      <!-- Table / Cards List -->
+      <div class="mt-6 overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+              <th class="py-2.5 px-3">ID</th>
+              <th class="py-2.5 px-3">Judul</th>
+              <th class="py-2.5 px-3">Keterangan</th>
+              <th class="py-2.5 px-3">Waktu Disimpan</th>
+              <th class="py-2.5 px-3 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="notes-table-body" class="divide-y divide-slate-800/60 font-mono text-xs">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500 font-sans">Memuat data dari database...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick AWS Troubleshooting Card -->
+    <div class="mt-8 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 text-xs text-slate-400">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
+        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Checklist Praktikum AWS EC2 & RDS
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+        <div class="p-3 bg-slate-950/60 rounded-lg border border-slate-800">
+          <p class="font-semibold text-slate-300">1. Security Group EC2</p>
+          <p class="mt-1">Inbound Rule: Buka port <code class="text-amber-400">80/TCP</code> atau <code class="text-amber-400">3000/TCP</code> dari <code class="text-slate-300">0.0.0.0/0</code> agar dashboard bisa diakses via browser.</p>
+        </div>
+        <div class="p-3 bg-slate-950/60 rounded-lg border border-slate-800">
+          <p class="font-semibold text-slate-300">2. Security Group RDS</p>
+          <p class="mt-1">Inbound Rule: Buka port <code class="text-amber-400">3306</code> (MySQL) atau <code class="text-amber-400">5432</code> (Postgres) dengan Source diarahkan ke <strong>Security Group ID milik EC2</strong>.</p>
+        </div>
+        <div class="p-3 bg-slate-950/60 rounded-lg border border-slate-800">
+          <p class="font-semibold text-slate-300">3. Target Group Health Check</p>
+          <p class="mt-1">Gunakan endpoint <code class="text-amber-400">/health</code> untuk AWS Application Load Balancer (ALB) health check (mengembalikan status code 200 OK).</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    async function loadInfo() {
+      try {
+        const res = await fetch('/api/info');
+        const data = await res.json();
+        
+        document.getElementById('server-hostname').textContent = data.hostname || '-';
+        document.getElementById('server-os').textContent = data.platform || '-';
+        
+        const hours = Math.floor(data.serverUptimeSeconds / 3600);
+        const mins = Math.floor((data.serverUptimeSeconds % 3600) / 60);
+        const secs = data.serverUptimeSeconds % 60;
+        document.getElementById('server-uptime').textContent = `${hours}j ${mins}m ${secs}d (Mem Free: ${data.freeMemoryMb} MB)`;
+
+        if (data.ec2 && data.ec2.isEc2) {
+          document.getElementById('ec2-indicator').textContent = 'AWS EC2';
+          document.getElementById('ec2-indicator').className = 'text-xs px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-mono font-semibold';
+          document.getElementById('ec2-id').textContent = `${data.ec2.instanceId} (${data.ec2.instanceType})`;
+          document.getElementById('ec2-az').textContent = data.ec2.availabilityZone;
+          document.getElementById('ec2-ips').textContent = `Pub: ${data.ec2.publicIpv4} | Priv: ${data.ec2.localIpv4}`;
+        } else {
+          document.getElementById('ec2-indicator').textContent = 'Local / Non-EC2';
+          document.getElementById('ec2-id').textContent = 'Bukan instance EC2 (Local/VM)';
+          document.getElementById('ec2-az').textContent = 'Localhost';
+          document.getElementById('ec2-ips').textContent = data.localIps.join(', ') || '127.0.0.1';
+        }
+      } catch (e) {
+        console.error('Error load info:', e);
+      }
+    }
+
+    async function checkDbStatus() {
+      const badge = document.getElementById('db-badge');
+      const errBox = document.getElementById('db-error-box');
+      badge.innerHTML = '<span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-mono animate-pulse">Testing ping...</span>';
+      
+      try {
+        const res = await fetch('/api/db/status');
+        const data = await res.json();
+
+        document.getElementById('db-engine').textContent = data.dialect || '-';
+        document.getElementById('db-host').textContent = data.host || '-';
+        document.getElementById('db-name').textContent = data.database || '-';
+
+        if (data.connected) {
+          badge.innerHTML = '<span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold font-mono">Connected</span>';
+          document.getElementById('db-latency').textContent = `${data.latencyMs} ms`;
+          errBox.classList.add('hidden');
+        } else {
+          badge.innerHTML = '<span class="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-semibold font-mono">Disconnected</span>';
+          document.getElementById('db-latency').textContent = 'Fail';
+          errBox.textContent = data.error || data.message || 'Gagal terhubung ke database RDS';
+          errBox.classList.remove('hidden');
+        }
+      } catch (e) {
+        badge.innerHTML = '<span class="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">API Error</span>';
+        errBox.textContent = e.message;
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    async function loadNotes() {
+      const tbody = document.getElementById('notes-table-body');
+      try {
+        const res = await fetch('/api/notes');
+        const json = await res.json();
+        
+        if (!json.success || !json.data || json.data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-sans">${json.error ? 'Belum terhubung ke RDS: ' + json.error : 'Belum ada catatan. Tambahkan catatan di atas untuk tes INSERT.'}</td></tr>`;
+          document.getElementById('note-count').textContent = '0 Records';
+          return;
+        }
+
+        document.getElementById('note-count').textContent = `${json.data.length} Records`;
+        tbody.innerHTML = json.data.map(item => `
+          <tr class="hover:bg-slate-800/30 transition">
+            <td class="py-3 px-3 text-slate-400">#${item.id}</td>
+            <td class="py-3 px-3 font-semibold text-slate-100 font-sans">${escapeHtml(item.title)}</td>
+            <td class="py-3 px-3 text-slate-300 font-sans">${escapeHtml(item.content || '-')}</td>
+            <td class="py-3 px-3 text-slate-400">${new Date(item.created_at).toLocaleString('id-ID')}</td>
+            <td class="py-3 px-3 text-right">
+              <button onclick="handleDeleteNote(${item.id})" class="px-2 py-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition">
+                Hapus
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400 font-sans">Gagal memuat catatan: ${e.message}</td></tr>`;
+      }
+    }
+
+    async function handleCreateNote(e) {
+      e.preventDefault();
+      const titleInput = document.getElementById('note-title');
+      const contentInput = document.getElementById('note-content');
+      const btn = document.getElementById('btn-submit-note');
+
+      const title = titleInput.value.trim();
+      const content = contentInput.value.trim();
+      if (!title) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Gagal menyimpan: ' + (data.error || 'Unknown error'));
+        } else {
+          titleInput.value = '';
+          contentInput.value = '';
+          await loadNotes();
+        }
+      } catch (err) {
+        alert('Request failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Simpan`;
+      }
+    }
+
+    async function handleDeleteNote(id) {
+      if (!confirm(`Hapus catatan #${id}?`)) return;
+      try {
+        const res = await fetch('/api/notes/' + id, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Gagal menghapus: ' + data.error);
+        } else {
+          await loadNotes();
+        }
+      } catch (err) {
+        alert('Gagal menghapus: ' + err.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    function refreshAll() {
+      loadInfo();
+      checkDbStatus();
+      loadNotes();
+    }
+
+    refreshAll();
+  </script>
+</body>
+</html>
